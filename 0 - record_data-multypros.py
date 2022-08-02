@@ -6,6 +6,7 @@ import cv2 as cv
 import pickle
 import time
 import os
+from tqdm.auto import tqdm
 
 
 left_audio_data = []
@@ -62,6 +63,7 @@ def get_left_video(_attributes):
     while time.time() < _attributes + 10:
         pass
     print(f'GO! (left video)   {time.time() - _attributes}')
+    pbar = tqdm(total=590)
     while time.time() < _attributes + 30:
         _, left_frame = left_camera.read()
 
@@ -69,6 +71,8 @@ def get_left_video(_attributes):
             _, left_frame = left_camera.read()
 
         left_video_data.append(left_frame)
+        pbar.update(1)
+    pbar.close()
     print(f'Done. (left video)   {time.time() - _attributes}')
     path = r'D:\pythonProject\Sound_locator\temp'
     _file_name = 'left_video_data.pkl'
@@ -134,7 +138,7 @@ if __name__ == "__main__":
         if mic.name == 'Microphone (2- USB Live camera audio)':
             right_mic = mic
 
-    sample_rate = 48000  # default is 48000
+    sample_rate = 44100  # default is 48000
     num_frames = 2 ** 10
     ################################################
 
@@ -146,15 +150,15 @@ if __name__ == "__main__":
         p3 = mp.Process(target=get_left_video, args=(go_time, ))
         p4 = mp.Process(target=get_right_video, args=(go_time, ))
 
-        p1.start()
-        p2.start()
         p3.start()
         p4.start()
+        p1.start()
+        p2.start()
 
-        p1.join()
-        p2.join()
         p3.join()
         p4.join()
+        p1.join()
+        p2.join()
     ################################################
     path = r'D:\pythonProject\Sound_locator\temp'
 

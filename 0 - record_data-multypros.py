@@ -174,8 +174,8 @@ if __name__ == "__main__":
     right_video_data = np.array(right_video)
 
     plot_audio(left_audio_data, right_audio_data)
-    play_audio(speakers, sample_rate, left_audio_data)
-    play_audio(speakers, sample_rate, right_audio_data)
+    # play_audio(speakers, sample_rate, left_audio_data)
+    # play_audio(speakers, sample_rate, right_audio_data)
 
     to_save = {'left_audio_data': left_audio_data,
                'right_audio_data': right_audio_data,

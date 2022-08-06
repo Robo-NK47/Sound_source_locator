@@ -6,12 +6,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 import librosa.display as lib
+from scipy import signal
+from tqdm.auto import tqdm
 
 
-def plot_audio(channel):
-    plt.plot(channel, color='blue')
+def plot_audio(left_channel, right_channel):
+    plt.plot(left_channel.reshape(-1), color='blue', label="Left channel")
+    plt.plot(right_channel.reshape(-1), color='red', label="Right channel", alpha=0.6)
     plt.xlabel("Samples")
     plt.ylabel("Values")
+    plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.show()
@@ -31,32 +35,13 @@ def normalize_around_mean(_data):
         counter += 1
         print(f'{counter} - mean: {_data.mean():.3f}, std: {_data.std():.8f}')
 
-    clipped_data = np.zeros(_data.shape)
-    for i, cell in enumerate(_data):
-        clipped_cell = []
-        for entry in cell:
-            if entry > 1:
-                clipped_cell.append(1)
-            elif entry < 0:
-                clipped_cell.append(0)
-            else:
-                clipped_cell.append(entry)
-
-        clipped_data[i] = np.array(clipped_cell)
-
-    return clipped_data
+    return _data
 
 
-# def fft(_data):
-#     _complex = np.fft.fft(_data)
-#     _shape = (1, _complex.shape[0], _complex.shape[1])
-#
-#     _real = _complex.real.reshape(_shape)
-#     _imaginary = _complex.imag.reshape(_shape)
-#
-#     _complex = np.concatenate([_real, _imaginary], axis=0)
-#
-#     return _complex
+def clip_data(_data):
+    _data[_data > 1] = 1
+    _data[_data < 0] = 0
+    return _data
 
 
 def fft(_data):
@@ -76,6 +61,20 @@ def show_freq_domain(_data):
     plt.show()
 
 
+def wavelet_transform(_data):
+    wavelets = []
+    for cell in tqdm(_data):
+        wavelets.append(signal.cwt(cell, signal.ricker, np.arange(1, 129)))
+
+    return np.array(wavelets)
+
+
+def plot_wavelet(_data, frame):
+    plt.imshow(_data[frame], extent=[-1, 1, _data[frame].shape[-1], 1], cmap='PRGn', aspect='auto',
+               vmax=abs(_data[frame]).max(), vmin=-abs(_data[frame]).max())
+    plt.show()
+
+
 data_directory = r'D:\pythonProject\Sound_locator\labeled data'
 list_of_files = [f for f in listdir(data_directory) if isfile(join(data_directory, f))]
 
@@ -87,11 +86,16 @@ for file_name in list_of_files:
 
     del data['left_audio_data'], data['right_audio_data']
 
-    left_audio_fft = fft(left_audio)
-    right_audio_fft = fft(right_audio)
+    left_audio_wavelet = wavelet_transform(left_audio)
+    right_audio_wavelet = wavelet_transform(right_audio)
 
-    left_audio = normalize_around_mean(left_audio)
-    right_audio = normalize_around_mean(right_audio)
+    left_audio = clip_data(normalize_around_mean(left_audio))
+    right_audio = clip_data(normalize_around_mean(right_audio))
+
+    left_audio_wavelet = clip_data(normalize_around_mean(left_audio_wavelet))
+    right_audio_wavelet = clip_data(normalize_around_mean(right_audio_wavelet))
+
+    plot_audio(left_audio, right_audio)
 
     print('a')
 

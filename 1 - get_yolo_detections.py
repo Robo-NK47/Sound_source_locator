@@ -44,7 +44,7 @@ raw_data_path = os.path.join(os.getcwd(), 'raw data')
 list_of_raw_data_files = sorted([f for f in listdir(raw_data_path) if isfile(join(raw_data_path, f))])
 
 detection_path = os.path.join(os.getcwd(), 'detection data')
-model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
+model = torch.hub.load('ultralytics/yolov5', 'yolov5x', pretrained=True)
 
 for raw_data_file_name in list_of_raw_data_files:
     data = open_file(os.path.join(raw_data_path, raw_data_file_name))

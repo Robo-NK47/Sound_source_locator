@@ -4,10 +4,10 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 import matplotlib.pyplot as plt
-import librosa
 import librosa.display as lib
 from scipy import signal
 from tqdm.auto import tqdm
+import torch
 
 
 def plot_audio(left_channel, right_channel):
@@ -33,7 +33,7 @@ def normalize_around_mean(_data):
         _data = (_data / (_data.std() * thresh_hold)) + 0.5
         _data = (_data / _data.mean()) - 0.5
         counter += 1
-        print(f'{counter} - mean: {_data.mean():.3f}, std: {_data.std():.8f}')
+        # print(f'{counter} - mean: {_data.mean():.3f}, std: {_data.std():.8f}')
 
     return _data
 
@@ -42,15 +42,6 @@ def clip_data(_data):
     _data[_data > 1] = 1
     _data[_data < 0] = 0
     return _data
-
-
-def fft(_data):
-    to_return = []
-    for cell in _data:
-        x = librosa.stft(cell.reshape(-1).astype(np.float64))
-        xdb = librosa.amplitude_to_db(abs(x))
-        to_return.append(xdb)
-    return np.array(to_return)
 
 
 def show_freq_domain(_data):
@@ -66,7 +57,7 @@ def wavelet_transform(_data):
     for cell in tqdm(_data):
         wavelets.append(signal.cwt(cell, signal.ricker, np.arange(1, 129)))
 
-    return np.array(wavelets)
+    return np.array(wavelets).swapaxes(1, 2)
 
 
 def plot_wavelet(_data, frame):
@@ -76,9 +67,11 @@ def plot_wavelet(_data, frame):
 
 
 data_directory = r'D:\pythonProject\Sound_locator\labeled data'
+save_directory = r'D:\pythonProject\Sound_locator\final_label_data'
 list_of_files = [f for f in listdir(data_directory) if isfile(join(data_directory, f))]
 
-for file_name in list_of_files:
+for i, file_name in enumerate(list_of_files):
+    print(f'\nFile {i + 1} out of {len(list_of_files)}')
     data = open_file(os.path.join(data_directory, file_name))
 
     left_audio = np.array(data['left_audio_data'])
@@ -97,5 +90,12 @@ for file_name in list_of_files:
 
     plot_audio(left_audio, right_audio)
 
-    print('a')
+    data['labels'] = torch.tensor(data['labels'])
+    data['left_audio_data'] = torch.tensor(left_audio)
+    data['right_audio_data'] = torch.tensor(right_audio)
+    data['left_audio_wavelet_data'] = torch.tensor(left_audio_wavelet)
+    data['right_audio_wavelet_data'] = torch.tensor(right_audio_wavelet)
 
+    file_path = os.path.join(save_directory, file_name)
+    with open(file_path, 'wb') as handle:
+        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)

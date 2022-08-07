@@ -44,45 +44,35 @@ raw_data_path = os.path.join(os.getcwd(), 'raw data')
 list_of_raw_data_files = sorted([f for f in listdir(raw_data_path) if isfile(join(raw_data_path, f))])
 
 detection_path = os.path.join(os.getcwd(), 'detection data')
-model = torch.hub.load('ultralytics/yolov5', 'yolov5x', pretrained=True)
+model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
 
 for raw_data_file_name in list_of_raw_data_files:
     data = open_file(os.path.join(raw_data_path, raw_data_file_name))
-    left_audio_data = data['left_audio_data']
-    right_audio_data = data['right_audio_data']
-
-    plot_audio(left_audio_data, right_audio_data)
+    bitrate = data['audio_data']['bitrate']
+    audio = data['audio_data']['audio']
 
     left_camera_detections = video_to_detections(data['left_video_data'], model)
     right_camera_detections = video_to_detections(data['right_video_data'], model)
 
     sampling_factor = 1620
-    left_audio_data_factor = find_common_divider(len(left_audio_data), len(left_camera_detections), sampling_factor)
-    right_audio_data_factor = find_common_divider(len(right_audio_data), len(right_camera_detections), sampling_factor)
+    audio_factor = find_common_divider(len(audio), len(left_camera_detections), sampling_factor)
 
-    left_audio_data = left_audio_data[0:left_audio_data_factor]
-    right_audio_data = right_audio_data[0:right_audio_data_factor]
-
-    left_audio_data = left_audio_data.reshape(-1, sampling_factor)
-    right_audio_data = right_audio_data.reshape(-1, sampling_factor)
+    audio = audio[0:audio_factor]
+    audio = audio.reshape(len(left_camera_detections), -1, 2)
 
     new_left_result = []
     new_right_result = []
-    new_left_audio = []
-    new_right_audio = []
+    new_audio = []
 
-    for left_result, right_result, left_audio, right_audio in zip(left_camera_detections, right_camera_detections,
-                                                                  left_audio_data, right_audio_data):
+    for left_result, right_result, _audio in zip(left_camera_detections, right_camera_detections, audio):
         left_result = left_result.loc[left_result['name'] == 'person']
         right_result = right_result.loc[right_result['name'] == 'person']
         if len(left_result.index) > 0 and len(right_result.index) > 0:
             new_left_result.append(left_result)
             new_right_result.append(right_result)
-            new_left_audio.append(left_audio)
-            new_right_audio.append(right_audio)
+            new_audio.append(_audio)
 
-    to_save = {'left_audio_data': new_left_audio,
-               'right_audio_data': new_right_audio,
+    to_save = {'audio_data': {'bitrate': bitrate, 'audio': new_audio},
                'left_video_data': new_left_result,
                'right_video_data': new_right_result}
 

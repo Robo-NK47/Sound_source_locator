@@ -186,6 +186,15 @@ def fuse_audio(_left, _right):
     _left = _left[1].transpose()[0].reshape(-1, 1)
     _right = _right[1].transpose()[0].reshape(-1, 1)
 
+    if len(_left) > len(_right):
+        length = len(_right)
+
+    else:
+        length = len(_left)
+
+    _left = _left[0:length]
+    _right = _right[0:length]
+
     _audio = np.concatenate([_left, _right], axis=1)
 
     return {'bitrate': bitrate, 'audio': _audio}

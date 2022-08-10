@@ -8,11 +8,14 @@ import librosa.display as lib
 from scipy import signal
 from tqdm.auto import tqdm
 import torch
+from scipy.io.wavfile import write
+import torchaudio
+import sox
 
 
-def plot_audio(left_channel, right_channel):
-    plt.plot(left_channel.reshape(-1), color='blue', label="Left channel")
-    plt.plot(right_channel.reshape(-1), color='red', label="Right channel", alpha=0.6)
+def plot_audio(_audio):
+    plt.plot(_audio.transpose()[0].transpose().reshape(-1), color='blue', label="Left channel", alpha=0.6)
+    plt.plot(_audio.transpose()[1].transpose().reshape(-1), color='red', label="Right channel", alpha=0.6)
     plt.xlabel("Samples")
     plt.ylabel("Values")
     plt.legend()
@@ -67,35 +70,41 @@ def plot_wavelet(_data, frame):
 
 
 data_directory = r'D:\pythonProject\Sound_locator\labeled data'
+temp_directory = r'D:\pythonProject\Sound_locator\temp'
 save_directory = r'D:\pythonProject\Sound_locator\final_label_data'
+
 list_of_files = [f for f in listdir(data_directory) if isfile(join(data_directory, f))]
 
 for i, file_name in enumerate(list_of_files):
     print(f'\nFile {i + 1} out of {len(list_of_files)}')
     data = open_file(os.path.join(data_directory, file_name))
 
-    left_audio = np.array(data['left_audio_data'])
-    right_audio = np.array(data['right_audio_data'])
+    audio = torch.tensor(np.array(data['audio_data']['audio']))
+    bitrate = data['audio_data']['bitrate']
 
-    del data['left_audio_data'], data['right_audio_data']
+    # temp_path = os.path.join(temp_directory, 'audio file.wav')
+    # write(temp_path, bitrate, audio.reshape(-1, 2))
+    #
+    # audio, bitrate = torchaudio.load(temp_path)
+    effects = [["lowpass", "-1", "300"], ["speed", "0.8"], ["rate", f"{bitrate}"], ["reverb", "-w"], ]
+    waveform2, sample_rate2 = torchaudio.sox_effects.apply_effects_tensor(audio, bitrate, effects)
 
-    left_audio_wavelet = wavelet_transform(left_audio)
-    right_audio_wavelet = wavelet_transform(right_audio)
+    left_audio_wavelet = wavelet_transform(audio.transpose()[0].transpose())
+    right_audio_wavelet = wavelet_transform(audio.transpose()[1].transpose())
 
-    left_audio = clip_data(normalize_around_mean(left_audio))
-    right_audio = clip_data(normalize_around_mean(right_audio))
+    audio = clip_data(normalize_around_mean(audio))
 
     left_audio_wavelet = clip_data(normalize_around_mean(left_audio_wavelet))
     right_audio_wavelet = clip_data(normalize_around_mean(right_audio_wavelet))
 
-    plot_audio(left_audio, right_audio)
+    plot_audio(audio)
 
     data['labels'] = torch.tensor(data['labels'])
-    data['left_audio_data'] = torch.tensor(left_audio)
-    data['right_audio_data'] = torch.tensor(right_audio)
+    data['audio_data'] = torch.tensor(audio)
     data['left_audio_wavelet_data'] = torch.tensor(left_audio_wavelet)
     data['right_audio_wavelet_data'] = torch.tensor(right_audio_wavelet)
 
     file_path = os.path.join(save_directory, file_name)
     with open(file_path, 'wb') as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
